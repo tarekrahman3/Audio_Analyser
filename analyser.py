@@ -23,7 +23,15 @@ def compute_signals(audio_files_directory):
         signals.append(signal)
     return [signal / np.max(np.abs(signal)) for signal in signals]
 
-def analyse_wav(wav_file):
+def convert_unix_timestamp(timestamp):
+    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S') 
+
+def get_corr(input_signal, comparison_signals):
+    correlation_coefficients = [np.max(correlate(input_signal, signal, mode="full")) for signal in comparison_signals]
+    max_index = np.argmax(correlation_coefficients)
+    return correlation_coefficients[max_index]
+
+def analyse_wav(wav_file, good_samples_signals, mute_samples_signals):
     input_file = wav_file['file_name']
     timestamp = re.search(r" (.+)\.wav", input_file).group(1)
     wav_file['called_time'] = convert_unix_timestamp(float(timestamp))
@@ -43,18 +51,10 @@ def analyse_wav(wav_file):
             wav_file['status'] = "Inactive"
     return wav_file
 
-def convert_unix_timestamp(timestamp):
-    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S') 
-
-def get_corr(input_signal, comparison_signals):
-    correlation_coefficients = [np.max(correlate(input_signal, signal, mode="full")) for signal in comparison_signals]
-    max_index = np.argmax(correlation_coefficients)
-    return correlation_coefficients[max_index]
-
 
 if __name__ == "__main__":
     good_samples_signals = compute_signals(good_samples_directory)
     mute_samples_signals = compute_signals(mute_samples_directory)
     wav_files = [{"file_name": os.path.join(recorded_files_directory, file)} for file in os.listdir(recorded_files_directory)]
-    [pprint(analyse_wav(wav_file), sort_dicts=False) for wav_file in wav_files]
+    [pprint(analyse_wav(wav_file, good_samples_signals, mute_samples_signals), sort_dicts=False) for wav_file in wav_files]
     pd.DataFrame(wav_files).to_csv(f'analysis {time.time()}csv')
